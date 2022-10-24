@@ -2,7 +2,7 @@ import time, sys
 from joblib import Parallel, delayed
 from itertools import product
 
-NUM_CORE=4
+NUM_CORE=6
 MULTI=3
 
 def counting(species,chr_num):  # 딕셔너리와 파일 번호를 입력받음
