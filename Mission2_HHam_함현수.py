@@ -3,25 +3,30 @@
 import time
 from itertools import product
 
-def counting_oligonu(species,MULTI):  # 딕셔너리와 파일 번호를 입력받음
+def counting_oligonu(species,*args):  # 딕셔너리와 검사할 mer들을 입력받음. 각 mer에 대한 결과를 리스트로 만들어 반환.
     #print(chr_num,end=' ', flush=True)
-    dict_for_oligonu = {}
-    file = open("../files_bioinfo2022/"+species + ".fa", "r")
-    trash = file.readline()
-    full_chr = file.read()#대문자로 바꾸고 개행문자 삭제
-    full_chr = file_processing(full_chr)
-    multi_bases=full_chr[:MULTI]#full_chr의 가장 앞 2개만 가져오기
-    full_chr=full_chr[MULTI:]#이미 읽은 부분 잘라내기
-    dict_for_oligonu[multi_bases]=1
-    for ch in full_chr:
-        multi_bases=multi_bases[1:]+ch
-        try:
-            dict_for_oligonu[multi_bases] += 1
-        except KeyError:
-            dict_for_oligonu[multi_bases]=1
-    # End of for body for ch
-    file.close()
-    return dict_for_oligonu
+    list_dict=[]
+    file_tmp = open("../files_bioinfo2022/"+species + ".fa", "r")
+    trash = file_tmp.readline()
+    full_chr_tmp = file_tmp.read()
+    full_chr_tmp = file_processing(full_chr_tmp)#대문자로 바꾸고 개행문자 삭제
+    for MULTI in args:
+        dict_for_oligonu = {}
+        full_chr=full_chr_tmp
+        multi_bases=full_chr[:MULTI]#full_chr의 가장 앞 2개만 가져오기
+        full_chr=full_chr[MULTI:]#이미 읽은 부분 잘라내기
+        dict_for_oligonu[multi_bases]=1
+        for ch in full_chr:
+            multi_bases=multi_bases[1:]+ch
+            try:
+                dict_for_oligonu[multi_bases] += 1
+            except KeyError:
+                dict_for_oligonu[multi_bases]=1
+        list_dict.append(dict_for_oligonu)
+        # End of for body for ch
+    #End of for body for MULTI
+    file_tmp.close()
+    return list_dict
 ######################################################################## End of counting_oligonu
 
 def file_processing(sFile):#문자열 file을 건네받고 문자열 내부의 문자들은 전부 대문자로 바꾸고, 개행문자를 삭제함
@@ -114,9 +119,10 @@ def main():
                        "이상적인 dimer nucleotide의 비율", "이상적인 tetramer nucleotide의 비율"]  ##총 8개
     combination_dimer = make_product(base,2)
     combination_tetramer = make_product(base,4)
-    result_mono=counting_oligonu("NC_045512v2",1)# mononucleotide의 개수, 딕셔너리
-    result_dimer=counting_oligonu("NC_045512v2",2)# dinucleotide의 개수, 딕셔너리
-    result_tetramer=counting_oligonu("NC_045512v2",4)# tetranucleotide의 개수, 딕셔너리
+    temp_list_dict=counting_oligonu("NC_045512v2",1,2,4)
+    result_mono=temp_list_dict[0]
+    result_dimer=temp_list_dict[1]
+    result_tetramer=temp_list_dict[2]
     ratio_of_ACGT=ratio(result_mono,base)# 각 mononucleotide의 비율, 딕셔너리
     ratio_of_dimer=ratio(result_dimer,combination_dimer)# 각 dinucleotide의 비율, 딕셔너리
     ratio_of_tetramer=ratio(result_tetramer,combination_tetramer)# 각 tetranucleotide의 비율, 딕셔너리
