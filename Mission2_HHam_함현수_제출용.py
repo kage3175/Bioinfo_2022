@@ -5,7 +5,7 @@ from itertools import product
 
 def counting_oligonu(species,*args):  # 딕셔너리와 검사할 mer들을 입력받음. 각 mer에 대한 결과를 리스트로 만들어 반환.
     list_dict=[]
-    file_tmp = open("../files_bioinfo2022/"+species + ".fa", "r")
+    file_tmp = open(species + ".fa", "r")
     trash = file_tmp.readline()
     full_chr_tmp = file_tmp.read()
     full_chr_tmp = file_processing(full_chr_tmp)#대문자로 바꾸고 개행문자 삭제
