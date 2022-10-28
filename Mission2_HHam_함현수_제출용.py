@@ -32,6 +32,7 @@ def file_processing(sFile):#문자열 file을 건네받고 문자열 내부의 �
     newsFile=sFile.replace('\n', '')
     newsFile=newsFile.upper()
     return newsFile
+######################################################################## End of file_processing
 
 def ratio(dict_of_x, base):#base에 들어있는 키에 해당하는 딕셔너리 값들의 비율을 계산하여 딕셔너리 형태로 반환하는 함수
     ratio_of_ACGT = {}
