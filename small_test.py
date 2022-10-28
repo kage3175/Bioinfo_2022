@@ -1,3 +1,2 @@
-x='_asd'
-x=eval(x)
-print(x)
+for i in range(4,1,-1):
+    print(i)

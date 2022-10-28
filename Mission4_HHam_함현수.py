@@ -2,7 +2,9 @@ import time
 
 chr_list=[str(i) for i in range(1,23)]
 chr_list.append('X')
-chr_list.append('Y')#Chr list를 담기위한 것
+chr_list.append('Y')#Chr list를 담기위한 것. 이후로 절대 바뀔 일이 없으므로 전역변수로 설정하였다.
+
+BASE_COMPLE={'A':'T','C':'G','G':'C','T':'A'} #상보적인 염기쌍을 전역변수로서 미리 잡아둔다. A -T, C- G 간 결합을 딕셔너리로 표현한 것
 
 class RefSeq:
     def __init__(self):
@@ -43,6 +45,28 @@ class RefSeq:
     # End of parsing
 ######################################################################## End of RefSeq
 
+def file_processing(sFile):#문자열 file을 건네받고 문자열 내부의 문자들은 전부 대문자로 바꾸고, 개행문자를 삭제함
+    newsFile=sFile.replace('\n', '')
+    newsFile=newsFile.upper()
+    return newsFile
+######################################################################## End of file_processing
+
+def return_seq(refseq, dict_file_chr):
+    global BASE_COMPLE
+    mRNA_seq=''
+    chr_to_search=dict_file_chr[refseq.ChrID]
+    for i in range(refseq.Exon_num):
+        mRNA_seq=mRNA_seq+chr_to_search[refseq.Exon_starts[i]-1:refseq.Exon_ends[i]]#각 엑손의 시작~끝부분(시작점-1:끝점)을 문자열 슬라이싱을 통해 붙여나간다. ####주의: refseq의 location 정보는 +1을 시작으로 삼는다.
+    # End of for body for i
+    if refseq.Strand=='-': #strand가 '-'일 경우에는 따로 tempstr에서 서열을 뒤집고 상보적인 염기쌍으로 반전시켜주고 바로 리턴한다. '+' strand일 경우에는 이 if 문을 무시하고 mRNA_seq를 반환한다.
+        tempstr=''
+        for i in range(len(mRNA_seq)-1,-1,-1):
+            tempstr=tempstr+BASE_COMPLE[mRNA_seq[i]]
+        # End of for body for i
+        return tempstr
+    return mRNA_seq
+######################################################################## End of return_seq
+
 def make_dict(list_RefSeq_NM):# 각 entry가 1개 이상인지를 확인하기 위한 딕셔너리를 만들어서 반환
     dict={}
     for refseq in list_RefSeq_NM:
@@ -68,25 +92,40 @@ def main():
     start=time.time()
     list_RefSeq_raw=[] # 클래스들을 담는 리스트. 해당 gene이 어떤 특성을 갖던 일단 모두 넣고 본다.
     list_RefSeq_NM=[] # RefSeqID가 NM_으로 시작하고 1~22, X, Y chromosome에 존재하는 클래스들만 담을 리스트
-    file=open("../files_bioinfo2022/refFlat.txt", 'r') ############################## 제출할 때 바꿔야함
+    mRNA_gene={}
+    file=open("../files_bioinfo2022/refFlat.txt", 'r')############################## 제출할 때 바꿔야함
     for sLine in file.readlines():
         temp_RefSeq=RefSeq()
         temp_RefSeq.parsing(sLine)
         list_RefSeq_raw.append(temp_RefSeq)
-        if(temp_RefSeq.RefSeqID[:3]=='NM_' and (temp_RefSeq.ChrID in chr_list)): #RefSeqID가 NM_으로 시작하고 위치하는 chromosome이 chr_list(1~22,X,Y)에 존재하는 경우만 리스트에 append 해줌
+        if(temp_RefSeq.RefSeqID[:3]=='NM_' and (temp_RefSeq.ChrID in chr_list)):
             list_RefSeq_NM.append(temp_RefSeq)
     # End of for body for sLine
     dict_ID=make_dict(list_RefSeq_NM)# entry가 1개 이상인지를 확인하기 위한 딕셔너리
     file.close()
-    outfile=open("../files_bioinfo2022/result.txt", 'w') ############################## 제출할 때 바꿔야함
-    list_RefSeq_SingleEntry=delete_multientry(dict_ID, list_RefSeq_NM) # single entry gene만 골라 담은, 최종적인 리스트
+    outfile=open("../files_bioinfo2022/result.txt", 'w')############################## 제출할 때 바꿔야함
+    list_RefSeq_SingleEntry=delete_multientry(dict_ID, list_RefSeq_NM)
     print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry))
     list_RefSeq_SingleEntry.sort(key=lambda x:x.NUM_RefSeqID)#각 RefSeqID의 뒤에 숫자에 대해서 sorting
     for refseq in list_RefSeq_SingleEntry:
-        print(refseq.RefSeqID+'\t'+refseq.Gene_Symbol, file=outfile)
+        print(refseq.RefSeqID+'\t'+refseq.Gene_Symbol, file=outfile) #result.txt 파일에 각 RefSeqID에 대한 gene symbol을 탭으로 구분해서 출력
     # End of for body for refseq
     outfile.close()
+    outfile=open("../files_bioinfo2022/result_mRNAs.txt", 'w')############################## 제출할 때 바꿔야함
+    dict_file_chr={}
+    for chr_num in chr_list: # 1번부터 Y까지의 크로모좀 전체 시퀀스를 해당 크로모좀 번호(string 형태)를 키로 하는 딕셔너리에 저장
+        temp_file=open("../files_bioinfo2022/hg38/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
+        temp_seq_chr=temp_file.read()
+        temp_seq_chr=file_processing(temp_seq_chr)
+        dict_file_chr[chr_num]=temp_seq_chr
+    for refseq in list_RefSeq_SingleEntry:
+        mRNA_gene[refseq.RefSeqID]=return_seq(refseq, dict_file_chr)
+        print(refseq.RefSeqID,'\t', mRNA_gene[refseq.RefSeqID], file=outfile)
+    outfile.close()
     print("총 걸린 시간은 "+str(time.time()-start)+"초입니다.")
+    
+    
+    
 ######################################################################## End of main
 
 main()
