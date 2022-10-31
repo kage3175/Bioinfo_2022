@@ -125,7 +125,7 @@ def main():
         temp_seq_chr=temp_file.read()
         temp_seq_chr=file_processing(temp_seq_chr)
         dict_file_chr[chr_num]=temp_seq_chr
-    print_outfile(list_RefSeq_SingleEntry[:100],dict_file_chr,outfile)#outfile에 txt 형태로 각 RefSeqID에 해당하는 mRNA를 write하는 함수.
+    print_outfile(list_RefSeq_SingleEntry,dict_file_chr,outfile)#outfile에 txt 형태로 각 RefSeqID에 해당하는 mRNA를 write하는 함수.
     outfile.close()
     print("총 걸린 시간은 "+str(time.time()-start)+"초입니다.")
 ######################################################################## End of main
