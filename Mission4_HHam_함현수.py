@@ -2,7 +2,7 @@ import time
 
 chr_list=[str(i) for i in range(1,23)]
 chr_list.append('X')
-chr_list.append('Y')#Chr list를 담기위한 것. 이후로 절대 바뀔 일이 없으므로 전역변수로 설정하였다.
+chr_list.append('Y')#Chr list를 담기위한 것. 사람의 유전자 이름은 절대 바뀔 일이 없으므로 전역변수로 설정하였다.
 
 BASE_COMPLE={'A':'T','C':'G','G':'C','T':'A'} #상보적인 염기쌍을 전역변수로서 미리 잡아둔다. A -T, C- G 간 결합을 딕셔너리로 표현한 것
 
@@ -87,12 +87,19 @@ def delete_multientry(dict_check, list_RefSeq_NM): # entry가 여러 개인 경�
     return templist
 ######################################################################## End of delete_multientry
 
+def print_outfile(list_RefSeq, dict_file_chr,outfile):
+    for refseq in list_RefSeq:
+        mRNA_seq=return_seq(refseq, dict_file_chr)
+        print(refseq.RefSeqID, '\t', mRNA_seq,file=outfile)
+######################################################################## End of print_outfile
+
+
 def main():
     global chr_list
     start=time.time()
     list_RefSeq_raw=[] # 클래스들을 담는 리스트. 해당 gene이 어떤 특성을 갖던 일단 모두 넣고 본다.
     list_RefSeq_NM=[] # RefSeqID가 NM_으로 시작하고 1~22, X, Y chromosome에 존재하는 클래스들만 담을 리스트
-    mRNA_gene={}
+    #mRNA_gene={}
     file=open("../files_bioinfo2022/refFlat.txt", 'r')############################## 제출할 때 바꿔야함
     for sLine in file.readlines():
         temp_RefSeq=RefSeq()
@@ -114,18 +121,13 @@ def main():
     outfile=open("../files_bioinfo2022/result_mRNAs.txt", 'w')############################## 제출할 때 바꿔야함
     dict_file_chr={}
     for chr_num in chr_list: # 1번부터 Y까지의 크로모좀 전체 시퀀스를 해당 크로모좀 번호(string 형태)를 키로 하는 딕셔너리에 저장
-        temp_file=open("../files_bioinfo2022/hg38/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
+        temp_file=open("../files_bioinfo2022/hg38ChrFiles/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
         temp_seq_chr=temp_file.read()
         temp_seq_chr=file_processing(temp_seq_chr)
         dict_file_chr[chr_num]=temp_seq_chr
-    for refseq in list_RefSeq_SingleEntry:
-        mRNA_gene[refseq.RefSeqID]=return_seq(refseq, dict_file_chr)
-        print(refseq.RefSeqID,'\t', mRNA_gene[refseq.RefSeqID], file=outfile)
+    print_outfile(list_RefSeq_SingleEntry[:100],dict_file_chr,outfile)#outfile에 txt 형태로 각 RefSeqID에 해당하는 mRNA를 write하는 함수.
     outfile.close()
     print("총 걸린 시간은 "+str(time.time()-start)+"초입니다.")
-    
-    
-    
 ######################################################################## End of main
 
 main()
