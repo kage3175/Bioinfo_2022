@@ -3,6 +3,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdbool.h>
+#include <memory.h>
 
 //int compare(const void*a, const void*b);
 
@@ -10,7 +11,7 @@
 
 typedef struct _mRNA{
 	char Gene_Symbol[20];
-	char RefSeqID[15];
+	char RefSeqID[20];
 	char ChrID[7];
 	char Strand[2];
 	int Txn_start;
@@ -18,8 +19,8 @@ typedef struct _mRNA{
 	int coding_start;
 	int coding_end;
 	int Num_Exon;
-	long long Exon_Starts[150];
-	long long Exon_Ends[150];
+	long long Exon_Starts[500];
+	long long Exon_Ends[500];
 	int Num_RefSeqID;
 }mRNA;
 
@@ -70,6 +71,7 @@ int main(void){
 	temp_mRNA = (mRNA *)malloc(sizeof(mRNA)*100000);
 	int total_num_NMgenes=0;
 	char chr_id[7];
+	int temp_num=0;
 	bool flag=true;
 	
 	
@@ -101,10 +103,13 @@ int main(void){
 		if(strncmp(temp_str[1],"NM_",3)==0){
 			if (temp_str[2][4]!='/0') str_splice(chr_id,temp_str[2],0,5);
 			else str_splice(chr_id,temp_str[2],0,4);
+			//if(!(chr_id[3]=='1'||chr_id[3]=='2'||chr_id[3]=='3'||chr_id[3]=='4'||chr_id[3]=='5'||chr_id[3]=='6'||chr_id[3]=='7'||chr_id[3]=='8'||chr_id[3]=='9'||chr_id[3]=='X'||chr_id[3]=='Y')) continue;
 			if(strcmp(temp_str[2],chr_id)==0){
 				flag=true;
+				str_splice(temp,temp_str[1],3,100);
+				temp_num=atoi(temp);
 				for(i=0;i<total_num_NMgenes;i++){
-					if(strcmp(temp_mRNA[i].RefSeqID,temp_str[1])==0){
+					if(temp_num==temp_mRNA[i].Num_RefSeqID){
 						//printf("%s %s\n",temp_mRNA[i].RefSeqID, temp_str[1]);
 						flag=false;
 						break;
@@ -113,6 +118,7 @@ int main(void){
 				if(flag==true){
 					strcpy(temp_mRNA[total_num_NMgenes].Gene_Symbol,temp_str[0]);
 					strcpy(temp_mRNA[total_num_NMgenes].RefSeqID,temp_str[1]);
+					//strcat(temp_mRNA[total_num_NMgenes].RefSeqID,"\n");
 					str_splice(temp,temp_str[1],3,100);
 					temp_mRNA[total_num_NMgenes].Num_RefSeqID=atoi(temp);
 					strcpy(temp_mRNA[total_num_NMgenes].ChrID,temp_str[2]);
@@ -132,10 +138,14 @@ int main(void){
 		}
 	}
 	qsort(temp_mRNA, total_num_NMgenes, sizeof(mRNA), compare);
-	//for(i=0;i<total_num_NMgenes;i++) printf("%s\n", temp_mRNA[i].RefSeqID);
-	for(i=0;i<total_num_NMgenes;i++) printf("%s\n", temp_mRNA[i].RefSeqID);
-	//printf("..%d..\n",exon_starts[0]);
 	fclose(file);
+	FILE* outfile=fopen("../files_bioinfo2022/result_c.txt","w");
+	printf("%d\n", total_num_NMgenes);
+	for(i=0;i<total_num_NMgenes;i++) {
+		fprintf(outfile,"%s\n", temp_mRNA[i].RefSeqID);
+	}
+	//printf("..%d..\n",exon_starts[0]);
+	fclose(outfile);
 	free(temp_mRNA);
 	
 	return 0;
