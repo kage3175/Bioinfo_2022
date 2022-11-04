@@ -26,8 +26,8 @@ class RefSeq:
         self.NUM_RefSeqID=0
         self.temp=[]
         self.mRNASeq='NULL'
-        self.ORF_start=0
-        self.ORF_end=0
+        self.ORF_start=-1
+        self.ORF_end=-1
         self.Length_mRNA=0
         self.Length_ORF=0
     # End of __init__
@@ -189,8 +189,12 @@ def make_list_raw_NM(file):
 ######################################################################## End of make_list_NM
 
 def fancy_print(*args):
-    for element in args:
-        print(element)
+    length=len(args)
+    templist=[str(i+1)+"번 답:\t" for i in range(length)]
+    for elements in zip(templist, args):
+        for element in elements:
+            print(element, end="")
+        print()
     #End of for body for element
 ######################################################################## End of fancy_print
 
