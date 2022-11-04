@@ -162,7 +162,7 @@ def main():
     # End of for body for sLine
     dict_ID=make_dict(list_RefSeq_NM)# entry가 1개 이상인지를 확인하기 위한 딕셔너리
     file.close()
-    outfile=open("../files_bioinfo2022/result_bigtest.txt", 'w')############################## 제출할 때 바꿔야함
+    outfile=open("../files_bioinfo2022/result.txt", 'w')############################## 제출할 때 바꿔야함
     list_RefSeq_SingleEntry=delete_multientry(dict_ID, list_RefSeq_NM)
     list_RefSeq_SingleEntry.sort(key=lambda x:x.NUM_RefSeqID)#각 RefSeqID의 뒤에 숫자에 대해서 sorting
     for chr_num in chr_list: # 1번부터 Y까지의 크로모좀 전체 시퀀스를 해당 크로모좀 번호(string 형태)를 키로 하는 딕셔너리에 저장
@@ -184,7 +184,11 @@ def main():
     print_outfile(list_mRNA_ANS5,outfile)
     outfile.close()
     print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_validORF),len(list_mRNA_ANS5))
+    outfile=open("../files_bioinfo2022/result_mRNAs_test.txt","w")
+    for refseq in list_mRNA_ANS5:
+        print(refseq.RefSeqID+'\n'+refseq.mRNASeq+'\n',file=outfile)
     print("총 걸린 시간은 "+str(time.time()-start)+"초입니다.")
+    outfile.close()
 ######################################################################## End of main
 
 main()
