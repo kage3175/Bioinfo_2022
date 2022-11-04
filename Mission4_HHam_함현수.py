@@ -50,10 +50,10 @@ class RefSeq:
         self.Exon_ends=self.exon_list_precessing(list_exon=list_sLine[10])
         self.NUM_RefSeqID=int(self.RefSeqID[3:])
     # End of parsing
-    def Get_mRNASeq(self,dict_file_chr):
+    def Get_mRNASeq(self,file_chr):
         mRNA_seq=''
         temp_length=0
-        chr_to_search=dict_file_chr[self.ChrID]
+        chr_to_search=file_chr
         for i in range(self.Exon_num):
             mRNA_seq=mRNA_seq+chr_to_search[self.Exon_starts[i]:self.Exon_ends[i]]#각 엑손의 시작~끝부분(시작점-1:끝점)을 문자열 슬라이싱을 통해 붙여나간다. ####주의: refseq의 location 정보는 +1을 시작으로 삼는다.
             if(self.Exon_starts[i]<=self.Coding_start<self.Exon_ends[i]):
@@ -113,7 +113,7 @@ def delete_multientry(dict_check, list_RefSeq_NM): # entry가 여러 개인 경�
     return templist
 ######################################################################## End of delete_multientry
 
-def delete_multientry_2(dict_check, list_RefSeq_NM): # entry가 여러 개인 하나만 남겨서 리스트 반환
+def leave_representitive_isoform(dict_check, list_RefSeq_NM): # entry가 여러 개인 isoform 중 RefSeqID 숫자가 가장 작은 하나만 남겨서 리스트 반환
     templist=[]
     for refseq in list_RefSeq_NM:
         if dict_check[refseq.Gene_Symbol]==1:
@@ -121,7 +121,7 @@ def delete_multientry_2(dict_check, list_RefSeq_NM): # entry가 여러 개인 �
             dict_check[refseq.Gene_Symbol]=0
     # End of for body for refseq
     return templist
-######################################################################## End of delete_multientry_2
+######################################################################## End of leave_representitive_isoform
 
 def print_outfile(list_RefSeq, outfile):
     for refseq in list_RefSeq:
@@ -162,25 +162,25 @@ def main():
     # End of for body for sLine
     dict_ID=make_dict(list_RefSeq_NM)# entry가 1개 이상인지를 확인하기 위한 딕셔너리
     file.close()
-    outfile=open("../files_bioinfo2022/result.txt", 'w')############################## 제출할 때 바꿔야함
+    outfile=open("../files_bioinfo2022/result_bigtest.txt", 'w')############################## 제출할 때 바꿔야함
     list_RefSeq_SingleEntry=delete_multientry(dict_ID, list_RefSeq_NM)
     list_RefSeq_SingleEntry.sort(key=lambda x:x.NUM_RefSeqID)#각 RefSeqID의 뒤에 숫자에 대해서 sorting
-    dict_file_chr={}
     for chr_num in chr_list: # 1번부터 Y까지의 크로모좀 전체 시퀀스를 해당 크로모좀 번호(string 형태)를 키로 하는 딕셔너리에 저장
-        temp_file=open("../files_bioinfo2022/hg38ChrFiles/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
-        ##sorting하고 while refseq.chrnum==chrnum으로 돌리기
-        trash=temp_file.readline()
-        temp_seq_chr=temp_file.read()
-        temp_seq_chr=file_processing(temp_seq_chr)
-        dict_file_chr[chr_num]=temp_seq_chr
+        chr_file=open("../files_bioinfo2022/hg38ChrFiles/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
+        trash=chr_file.readline()
+        full_seq_chr=chr_file.read()
+        full_seq_chr=file_processing(full_seq_chr)
+        chr_file.close()
+        for refseq in list_RefSeq_SingleEntry:
+            if(refseq.ChrID==chr_num):
+                refseq.Get_mRNASeq(full_seq_chr)
+                if(check_valid_mRNA(refseq)):
+                    list_validORF.append(refseq)
+        #End for body for refseq
+    list_validORF.sort(key=lambda x:x.NUM_RefSeqID)
     #End of for body for chr_num
-    for refseq in list_RefSeq_SingleEntry:
-        refseq.Get_mRNASeq(dict_file_chr)
-        if(check_valid_mRNA(refseq)):
-            list_validORF.append(refseq)
-    #End of for body for refseq
-    dict_ID_isoform=make_dict_2(list_validORF)
-    list_mRNA_ANS5=delete_multientry_2(dict_ID_isoform,list_validORF)
+    dict_ID_isoform=make_dict_2(list_validORF)#isoform인 친구들은 하나만 나타나도록 딕셔너리 만든다
+    list_mRNA_ANS5=leave_representitive_isoform(dict_ID_isoform,list_validORF)
     print_outfile(list_mRNA_ANS5,outfile)
     outfile.close()
     print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_validORF),len(list_mRNA_ANS5))

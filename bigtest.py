@@ -27,6 +27,8 @@ class RefSeq:
         self.mRNASeq='NULL'
         self.ORF_start=0
         self.ORF_end=0
+        self.Length_mRNA=0
+        self.Length_ORF=0
     # End of __init__
     def exon_list_precessing(self,list_exon):
         temp=list_exon.split(",")
@@ -47,13 +49,11 @@ class RefSeq:
         self.Exon_starts=self.exon_list_precessing(list_exon=list_sLine[9])
         self.Exon_ends=self.exon_list_precessing(list_exon=list_sLine[10])
         self.NUM_RefSeqID=int(self.RefSeqID[3:])
-        self.Length_mRNA=0
-        self.Length_ORF=0
     # End of parsing
-    def Get_mRNASeq(self,dict_file_chr):
+    def Get_mRNASeq(self,file_chr):
         mRNA_seq=''
         temp_length=0
-        chr_to_search=dict_file_chr[self.ChrID]
+        chr_to_search=file_chr
         for i in range(self.Exon_num):
             mRNA_seq=mRNA_seq+chr_to_search[self.Exon_starts[i]:self.Exon_ends[i]]#각 엑손의 시작~끝부분(시작점-1:끝점)을 문자열 슬라이싱을 통해 붙여나간다. ####주의: refseq의 location 정보는 +1을 시작으로 삼는다.
             if(self.Exon_starts[i]<=self.Coding_start<self.Exon_ends[i]):
@@ -69,13 +69,13 @@ class RefSeq:
                 tempstr=tempstr+BASE_COMPLE[mRNA_seq[i]]
             self.mRNASeq=tempstr
             temp=self.ORF_end
-            self.ORF_end=self.Length_mRNA-1-self.ORF_start+1
+            self.ORF_end=self.Length_mRNA-self.ORF_start
             self.ORF_start=self.Length_mRNA-temp
         else:
             self.mRNASeq=mRNA_seq
         self.Length_ORF=self.ORF_end-self.ORF_start
             # End of for body for i
-        # End of Get_mRNASeq  
+        # End of Get_mRNASeq
                 
 ######################################################################## End of RefSeq
 
@@ -84,22 +84,6 @@ def file_processing(sFile):#문자열 file을 건네받고 문자열 내부의 �
     newsFile=newsFile.upper()
     return newsFile
 ######################################################################## End of file_processing
-
-'''def return_seq(refseq, dict_file_chr):
-    global BASE_COMPLE
-    mRNA_seq=''
-    chr_to_search=dict_file_chr[refseq.ChrID]
-    for i in range(refseq.Exon_num):
-        mRNA_seq=mRNA_seq+chr_to_search[refseq.Exon_starts[i]:refseq.Exon_ends[i]]#각 엑손의 시작~끝부분(시작점-1:끝점)을 문자열 슬라이싱을 통해 붙여나간다. ####주의: refseq의 location 정보는 +1을 시작으로 삼는다.
-    # End of for body for i
-    if refseq.Strand=='-': #strand가 '-'일 경우에는 따로 tempstr에서 서열을 뒤집고 상보적인 염기쌍으로 반전시켜주고 바로 리턴한다. '+' strand일 경우에는 이 if 문을 무시하고 mRNA_seq를 반환한다.
-        tempstr=''
-        for i in range(len(mRNA_seq)-1,-1,-1):
-            tempstr=tempstr+BASE_COMPLE[mRNA_seq[i]]
-        # End of for body for i
-        return tempstr
-    return mRNA_seq
-######################################################################## End of return_seq'''
 
 def make_dict(list_RefSeq_NM):# 각 entry가 1개 이상인지를 확인하기 위한 딕셔너리를 만들어서 반환
     dict={}
@@ -115,10 +99,7 @@ def make_dict(list_RefSeq_NM):# 각 entry가 1개 이상인지를 확인하기 �
 def make_dict_2(list_RefSeq_validORF):# 각 entry가 1개 이상인지를 확인하기 위한 딕셔너리를 만들어서 반환
     dict={}
     for refseq in list_RefSeq_validORF:
-        try:
-            dict[refseq.Gene_Symbol]+=1
-        except KeyError:
-            dict[refseq.Gene_Symbol]=1
+        dict[refseq.Gene_Symbol]=1
     # End of for body for refseq
     return dict
 ######################################################################## End of make_dict_2
@@ -131,13 +112,11 @@ def delete_multientry(dict_check, list_RefSeq_NM): # entry가 여러 개인 경�
     # End of for body for refseq
     return templist
 ######################################################################## End of delete_multientry
-def delete_multientry_2(dict_check, list_RefSeq_NM): # entry가 여러 개인 경우를 제외하고 만든 (클래스)리스트를 반환
+
+def delete_multientry_2(dict_check, list_RefSeq_NM): # entry가 여러 개인 하나만 남겨서 리스트 반환
     templist=[]
     for refseq in list_RefSeq_NM:
         if dict_check[refseq.Gene_Symbol]==1:
-            templist.append(refseq)
-            dict_check[refseq.Gene_Symbol]=0
-        elif dict_check[refseq.Gene_Symbol]>1:
             templist.append(refseq)
             dict_check[refseq.Gene_Symbol]=0
     # End of for body for refseq
@@ -147,11 +126,11 @@ def delete_multientry_2(dict_check, list_RefSeq_NM): # entry가 여러 개인 �
 def print_outfile(list_RefSeq, outfile):
     for refseq in list_RefSeq:
         #mRNA_seq=return_seq(refseq, dict_file_chr)
-        print(refseq.RefSeqID, '\n', refseq.mRNASeq,file=outfile)
+        print(refseq.RefSeqID+'\t'+refseq.Gene_Symbol+'\t'+str(refseq.ORF_start)+'\t'+str(refseq.Length_ORF)+'\t'+str(refseq.Length_mRNA-refseq.ORF_end) ,file=outfile)
     #End for body for refseq
 ######################################################################## End of print_outfile
 
-def check_valid_mRNA(refseq):
+def check_valid_mRNA(refseq): # mRNA의 ORF 길이가 3의 배수인지, start codon이나 stop codon이 시작과 끝에 있는지, 중간에 멈춰버리지 않는 지 등을 검사
     global STOP_CODON
     if(refseq.Length_ORF%3!=0):
         return False
@@ -173,7 +152,6 @@ def main():
     list_RefSeq_raw=[] # 클래스들을 담는 리스트. 해당 gene이 어떤 특성을 갖던 일단 모두 넣고 본다.
     list_RefSeq_NM=[] # RefSeqID가 NM_으로 시작하고 1~22, X, Y chromosome에 존재하는 클래스들만 담을 리스트
     list_validORF=[]#ANS4에 해당하는 refseq만 남기는 리스트
-    #mRNA_gene={}
     file=open("../files_bioinfo2022/refFlat.txt", 'r')############################## 제출할 때 바꿔야함
     for sLine in file.readlines():
         temp_RefSeq=RefSeq()
@@ -184,36 +162,35 @@ def main():
     # End of for body for sLine
     dict_ID=make_dict(list_RefSeq_NM)# entry가 1개 이상인지를 확인하기 위한 딕셔너리
     file.close()
-    #outfile=open("../files_bioinfo2022/result.txt", 'w')############################## 제출할 때 바꿔야함
+    outfile=open("../files_bioinfo2022/result_bigtest.txt", 'w')############################## 제출할 때 바꿔야함
     list_RefSeq_SingleEntry=delete_multientry(dict_ID, list_RefSeq_NM)
     list_RefSeq_SingleEntry.sort(key=lambda x:x.NUM_RefSeqID)#각 RefSeqID의 뒤에 숫자에 대해서 sorting
-    '''for refseq in list_RefSeq_SingleEntry:
-        print(refseq.RefSeqID+'\t'+refseq.Gene_Symbol, file=outfile) #result.txt 파일에 각 RefSeqID에 대한 gene symbol을 탭으로 구분해서 출력
-    # End of for body for refseq'''
-    #outfile.close()
-    #outfile=open("../files_bioinfo2022/result_mRNAs_test.txt", 'w')############################## 제출할 때 바꿔야함
     dict_file_chr={}
     for chr_num in chr_list: # 1번부터 Y까지의 크로모좀 전체 시퀀스를 해당 크로모좀 번호(string 형태)를 키로 하는 딕셔너리에 저장
         temp_file=open("../files_bioinfo2022/hg38ChrFiles/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
+        ##sorting하고 while refseq.chrnum==chrnum으로 돌리기
         trash=temp_file.readline()
         temp_seq_chr=temp_file.read()
         temp_seq_chr=file_processing(temp_seq_chr)
-        dict_file_chr[chr_num]=temp_seq_chr
-    for refseq in list_RefSeq_SingleEntry:
+        #dict_file_chr[chr_num]=temp_seq_chr
+        temp_file.close()
+        for refseq in list_RefSeq_SingleEntry:
+            if(refseq.ChrID==chr_num):
+                refseq.Get_mRNASeq(temp_seq_chr)
+                if(check_valid_mRNA(refseq)):
+                    list_validORF.append(refseq)
+    list_validORF.sort(key=lambda x:x.NUM_RefSeqID)
+    #End of for body for chr_num
+    '''for refseq in list_RefSeq_SingleEntry:
         refseq.Get_mRNASeq(dict_file_chr)
         if(check_valid_mRNA(refseq)):
-            list_validORF.append(refseq)
-    dict_ID_isoform=make_dict_2(list_validORF)
+            list_validORF.append(refseq)'''
+    #End of for body for refseq
+    dict_ID_isoform=make_dict_2(list_validORF)#isoform인 친구들은 하나만 나타나도록
     list_mRNA_ANS5=delete_multientry_2(dict_ID_isoform,list_validORF)
+    print_outfile(list_mRNA_ANS5,outfile)
+    outfile.close()
     print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_validORF),len(list_mRNA_ANS5))
-    
-    '''for refseq in list_RefSeq_SingleEntry:
-        print_outfile(list_RefSeq_SingleEntry,outfile)
-        print(refseq.RefSeqID, refseq.ORF_start, refseq.ORF_end, len(refseq.mRNASeq), refseq.Length_mRNA)
-        print(refseq.mRNASeq[refseq.ORF_start:refseq.ORF_start+3], refseq.mRNASeq[refseq.ORF_end-3:refseq.ORF_end])'''
-    
-    #print_outfile(list_RefSeq_SingleEntry,dict_file_chr,outfile)#outfile에 txt 형태로 각 RefSeqID에 해당하는 mRNA를 write하는 함수.
-    #outfile.close()
     print("총 걸린 시간은 "+str(time.time()-start)+"초입니다.")
 ######################################################################## End of main
 
