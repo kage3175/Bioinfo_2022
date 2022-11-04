@@ -73,7 +73,7 @@ int main(void){
 	char chr_id[7];
 	int temp_num=0;
 	bool flag=true;
-	
+	int cnt=0;
 	
 	FILE* file=fopen("../files_bioinfo2022/refFlat.txt", "r");
 	if(file==NULL){
@@ -105,33 +105,21 @@ int main(void){
 			else str_splice(chr_id,temp_str[2],0,4);
 			//if(!(chr_id[3]=='1'||chr_id[3]=='2'||chr_id[3]=='3'||chr_id[3]=='4'||chr_id[3]=='5'||chr_id[3]=='6'||chr_id[3]=='7'||chr_id[3]=='8'||chr_id[3]=='9'||chr_id[3]=='X'||chr_id[3]=='Y')) continue;
 			if(strcmp(temp_str[2],chr_id)==0){
-				flag=true;
+				//strcpy(temp_mRNA[total_num_NMgenes].Gene_Symbol,temp_str[0]);
+				strcpy(temp_mRNA[total_num_NMgenes].RefSeqID,temp_str[1]);
+				//strcat(temp_mRNA[total_num_NMgenes].RefSeqID,"\n");
 				str_splice(temp,temp_str[1],3,100);
-				temp_num=atoi(temp);
-				for(i=0;i<total_num_NMgenes;i++){
-					if(temp_num==temp_mRNA[i].Num_RefSeqID){
-						//printf("%s %s\n",temp_mRNA[i].RefSeqID, temp_str[1]);
-						flag=false;
-						break;
-					}
-				}
-				if(flag==true){
-					strcpy(temp_mRNA[total_num_NMgenes].Gene_Symbol,temp_str[0]);
-					strcpy(temp_mRNA[total_num_NMgenes].RefSeqID,temp_str[1]);
-					//strcat(temp_mRNA[total_num_NMgenes].RefSeqID,"\n");
-					str_splice(temp,temp_str[1],3,100);
-					temp_mRNA[total_num_NMgenes].Num_RefSeqID=atoi(temp);
-					strcpy(temp_mRNA[total_num_NMgenes].ChrID,temp_str[2]);
-					strcpy(temp_mRNA[total_num_NMgenes].Strand, temp_str[3]);
-					temp_mRNA[total_num_NMgenes].Txn_start=atoi(temp_str[4]);
-					temp_mRNA[total_num_NMgenes].Txn_end=atoi(temp_str[5]);
-					temp_mRNA[total_num_NMgenes].coding_start=atoi(temp_str[6]);
-					temp_mRNA[total_num_NMgenes].coding_end=atoi(temp_str[7]);
-					temp_mRNA[total_num_NMgenes].Num_Exon=atoi(temp_str[8]);
-					split_to_longlong(",",temp_mRNA[total_num_NMgenes].Exon_Starts,temp_str[9]);
-					split_to_longlong(",",temp_mRNA[total_num_NMgenes].Exon_Ends, temp_str[10]);
-					total_num_NMgenes++;
-				}
+				temp_mRNA[total_num_NMgenes].Num_RefSeqID=atoi(temp);
+				strcpy(temp_mRNA[total_num_NMgenes].ChrID,temp_str[2]);
+				strcpy(temp_mRNA[total_num_NMgenes].Strand, temp_str[3]);
+				//temp_mRNA[total_num_NMgenes].Txn_start=atoi(temp_str[4]);
+				//temp_mRNA[total_num_NMgenes].Txn_end=atoi(temp_str[5]);
+				temp_mRNA[total_num_NMgenes].coding_start=atoi(temp_str[6]);
+				temp_mRNA[total_num_NMgenes].coding_end=atoi(temp_str[7]);
+				temp_mRNA[total_num_NMgenes].Num_Exon=atoi(temp_str[8]);
+				split_to_longlong(",",temp_mRNA[total_num_NMgenes].Exon_Starts,temp_str[9]);
+				split_to_longlong(",",temp_mRNA[total_num_NMgenes].Exon_Ends, temp_str[10]);
+				total_num_NMgenes++;
 			}
 			else continue;
 			//printf("%d\n", temp_mRNA[total_num_NMgenes-1].Num_RefSeqID);
@@ -140,10 +128,15 @@ int main(void){
 	qsort(temp_mRNA, total_num_NMgenes, sizeof(mRNA), compare);
 	fclose(file);
 	FILE* outfile=fopen("../files_bioinfo2022/result_c.txt","w");
-	printf("%d\n", total_num_NMgenes);
-	for(i=0;i<total_num_NMgenes;i++) {
-		fprintf(outfile,"%s\n", temp_mRNA[i].RefSeqID);
+	cnt=1;
+	fprintf(outfile,"%s\n", temp_mRNA[0].RefSeqID);
+	for(i=1;i<total_num_NMgenes;i++) {
+		if(temp_mRNA[i].Num_RefSeqID!=temp_mRNA[i+1].Num_RefSeqID&&temp_mRNA[i].Num_RefSeqID!=temp_mRNA[i-1].Num_RefSeqID){
+			fprintf(outfile,"%s\n", temp_mRNA[i].RefSeqID);
+			cnt++;
+		}
 	}
+	printf("%d\n", cnt);
 	//printf("..%d..\n",exon_starts[0]);
 	fclose(outfile);
 	free(temp_mRNA);
