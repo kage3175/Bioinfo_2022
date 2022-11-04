@@ -145,13 +145,30 @@ def check_valid_mRNA(refseq): # mRNA의 ORF 길이가 3의 배수인지, start c
         return True# 다 통과하면 True
 ######################################################################## End of check_valid_mRNA
 
+def make_list_valid(list_RefSeq_SingleEntry):
+    global chr_list
+    templist=[]
+    for chr_num in chr_list: # 1번부터 Y까지의 크로모좀 전체 시퀀스를 해당 크로모좀 번호(string 형태)를 키로 하는 딕셔너리에 저장
+        chr_file=open("../files_bioinfo2022/hg38ChrFiles/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
+        trash=chr_file.readline()
+        full_seq_chr=chr_file.read()
+        full_seq_chr=file_processing(full_seq_chr)
+        chr_file.close()
+        for refseq in list_RefSeq_SingleEntry:
+            if(refseq.ChrID==chr_num):
+                refseq.Get_mRNASeq(full_seq_chr)
+                if(check_valid_mRNA(refseq)):
+                    templist.append(refseq)
+        #End for body for refseq
+    #End of for body for chr_num
+    return templist
+######################################################################## End of make_list_valid
 
 def main():
     global chr_list
     start=time.time()
     list_RefSeq_raw=[] # 클래스들을 담는 리스트. 해당 gene이 어떤 특성을 갖던 일단 모두 넣고 본다.
     list_RefSeq_NM=[] # RefSeqID가 NM_으로 시작하고 1~22, X, Y chromosome에 존재하는 클래스들만 담을 리스트
-    list_mRNA_valid=[]#ANS4에 해당하는 refseq만 남기는 리스트
     file=open("../files_bioinfo2022/refFlat.txt", 'r')############################## 제출할 때 바꿔야함
     for sLine in file.readlines():
         temp_RefSeq=RefSeq()
@@ -165,28 +182,16 @@ def main():
     outfile=open("../files_bioinfo2022/result.txt", 'w')############################## 제출할 때 바꿔야함
     list_RefSeq_SingleEntry=delete_multientry(dict_ID, list_RefSeq_NM)
     list_RefSeq_SingleEntry.sort(key=lambda x:x.NUM_RefSeqID)#각 RefSeqID의 뒤에 숫자에 대해서 sorting
-    for chr_num in chr_list: # 1번부터 Y까지의 크로모좀 전체 시퀀스를 해당 크로모좀 번호(string 형태)를 키로 하는 딕셔너리에 저장
-        chr_file=open("../files_bioinfo2022/hg38ChrFiles/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
-        trash=chr_file.readline()
-        full_seq_chr=chr_file.read()
-        full_seq_chr=file_processing(full_seq_chr)
-        chr_file.close()
-        for refseq in list_RefSeq_SingleEntry:
-            if(refseq.ChrID==chr_num):
-                refseq.Get_mRNASeq(full_seq_chr)
-                if(check_valid_mRNA(refseq)):
-                    list_mRNA_valid.append(refseq)
-        #End for body for refseq
+    list_mRNA_valid=make_list_valid(list_RefSeq_SingleEntry) # 4번 answer에 대한 list
     list_mRNA_valid.sort(key=lambda x:x.NUM_RefSeqID)
-    #End of for body for chr_num
     dict_ID_isoform=make_dict_2(list_mRNA_valid)#isoform인 친구들은 하나만 나타나도록 딕셔너리 만든다
-    list_mRNA_ANS5=leave_representitive_isoform(dict_ID_isoform,list_mRNA_valid)
-    print_outfile(list_mRNA_ANS5,outfile)
+    list_mRNA_final=leave_representitive_isoform(dict_ID_isoform,list_mRNA_valid) # 5번 answer에 대한 list
+    print_outfile(list_mRNA_final,outfile) # 엑셀에 쓸 결과물을 txt 파일로 출력한다.
     outfile.close()
-    print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_mRNA_valid),len(list_mRNA_ANS5))
-    outfile=open("../files_bioinfo2022/result_mRNAs_test.txt","w")
-    for refseq in list_mRNA_ANS5:
-        print(refseq.RefSeqID+'\n'+refseq.mRNASeq+'\n',file=outfile)
+    print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_mRNA_valid),len(list_mRNA_final))
+    '''outfile=open("../files_bioinfo2022/result_mRNAs_test.txt","w")
+    for refseq in list_mRNA_final:
+        print(refseq.RefSeqID+'\n'+refseq.mRNASeq+'\n',file=outfile)'''
     print("총 걸린 시간은 "+str(time.time()-start)+"초입니다.")
     outfile.close()
 ######################################################################## End of main
