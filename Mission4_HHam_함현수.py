@@ -58,7 +58,7 @@ class RefSeq:
             mRNA_seq=mRNA_seq+chr_to_search[self.Exon_starts[i]:self.Exon_ends[i]]#각 엑손의 시작~끝부분(시작점-1:끝점)을 문자열 슬라이싱을 통해 붙여나간다. ####주의: refseq의 location 정보는 +1을 시작으로 삼는다.
             if(self.Exon_starts[i]<=self.Coding_start<self.Exon_ends[i]):
                 self.ORF_start=temp_length+self.Coding_start-self.Exon_starts[i]#이거 포함. + 기준 이건 무조건 A여야함
-            if(self.Exon_starts[i]<=self.Coding_end<self.Exon_ends[i]):
+            if(self.Exon_starts[i]<self.Coding_end<=self.Exon_ends[i]):
                 self.ORF_end=temp_length+self.Coding_end-self.Exon_starts[i]#이거 제외. + 기준 이거 바로 앞 3문자가 stop codod이여야함
             temp_length+=self.Exon_ends[i]-self.Exon_starts[i]
         self.Length_mRNA=temp_length
@@ -151,7 +151,7 @@ def main():
     start=time.time()
     list_RefSeq_raw=[] # 클래스들을 담는 리스트. 해당 gene이 어떤 특성을 갖던 일단 모두 넣고 본다.
     list_RefSeq_NM=[] # RefSeqID가 NM_으로 시작하고 1~22, X, Y chromosome에 존재하는 클래스들만 담을 리스트
-    list_validORF=[]#ANS4에 해당하는 refseq만 남기는 리스트
+    list_mRNA_valid=[]#ANS4에 해당하는 refseq만 남기는 리스트
     file=open("../files_bioinfo2022/refFlat.txt", 'r')############################## 제출할 때 바꿔야함
     for sLine in file.readlines():
         temp_RefSeq=RefSeq()
@@ -175,15 +175,15 @@ def main():
             if(refseq.ChrID==chr_num):
                 refseq.Get_mRNASeq(full_seq_chr)
                 if(check_valid_mRNA(refseq)):
-                    list_validORF.append(refseq)
+                    list_mRNA_valid.append(refseq)
         #End for body for refseq
-    list_validORF.sort(key=lambda x:x.NUM_RefSeqID)
+    list_mRNA_valid.sort(key=lambda x:x.NUM_RefSeqID)
     #End of for body for chr_num
-    dict_ID_isoform=make_dict_2(list_validORF)#isoform인 친구들은 하나만 나타나도록 딕셔너리 만든다
-    list_mRNA_ANS5=leave_representitive_isoform(dict_ID_isoform,list_validORF)
+    dict_ID_isoform=make_dict_2(list_mRNA_valid)#isoform인 친구들은 하나만 나타나도록 딕셔너리 만든다
+    list_mRNA_ANS5=leave_representitive_isoform(dict_ID_isoform,list_mRNA_valid)
     print_outfile(list_mRNA_ANS5,outfile)
     outfile.close()
-    print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_validORF),len(list_mRNA_ANS5))
+    print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_mRNA_valid),len(list_mRNA_ANS5))
     outfile=open("../files_bioinfo2022/result_mRNAs_test.txt","w")
     for refseq in list_mRNA_ANS5:
         print(refseq.RefSeqID+'\n'+refseq.mRNASeq+'\n',file=outfile)
