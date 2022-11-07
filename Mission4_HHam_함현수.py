@@ -51,7 +51,7 @@ class RefSeq:
         self.Exon_ends=self.exon_list_processing(list_exon=list_sLine[10])
         self.NUM_RefSeqID=int(self.RefSeqID[3:])
     # End of parsing
-    def Get_mRNASeq(self,file_chr):
+    def Get_mRNASeq(self,file_chr): #chromosome 전체 sequence를 넣어주면 mRNA 서열을 저장하는 메소드
         mRNA_seq=''
         temp_length=0
         chr_to_search=file_chr
@@ -62,19 +62,17 @@ class RefSeq:
             if(self.Exon_starts[i]<self.Coding_end<=self.Exon_ends[i]):
                 self.ORF_end=temp_length+self.Coding_end-self.Exon_starts[i]#이거 제외. + 기준 이거 바로 앞 3문자가 stop codod이여야함
             temp_length+=self.Exon_ends[i]-self.Exon_starts[i]
-        self.Length_mRNA=temp_length
+        self.Length_mRNA=temp_length#Length mRNA 변수에 길이 저장
         #End of for body for i
         if self.Strand=='-': #strand가 '-'일 경우에는 따로 tempstr에서 서열을 뒤집고 상보적인 염기쌍으로 반전시켜주고 바로 리턴한다. '+' strand일 경우에는 이 if 문을 무시하고 mRNA_seq를 반환한다.
             tempstr=''
             for i in range(len(mRNA_seq)-1,-1,-1):
                 tempstr=tempstr+BASE_COMPLE[mRNA_seq[i]]
             self.mRNASeq=tempstr
-            #temp=self.ORF_end
-            self.ORF_end, self.ORF_start=self.Length_mRNA-self.ORF_start, self.Length_mRNA-self.ORF_end
-            #self.ORF_start=self.Length_mRNA-temp
+            self.ORF_end, self.ORF_start=self.Length_mRNA-self.ORF_start, self.Length_mRNA-self.ORF_end # ORF end와 ORF start도 - strand에 맞게 변환시켜준다.
         else:
             self.mRNASeq=mRNA_seq
-        self.Length_ORF=self.ORF_end-self.ORF_start
+        self.Length_ORF=self.ORF_end-self.ORF_start#ORF 길이 저장
     #End of Get_mRNASeq
 ######################################################################## End of RefSeq
 
@@ -95,7 +93,7 @@ def make_dict_entry(list_RefSeq_NM):# 각 entry가 1개 이상인지를 확인�
     return dict
 ######################################################################## End of make_dict_entry
 
-def make_dict_for_isoform(list_RefSeq_validORF):# 각 entry가 1개 이상인지를 확인하기 위한 딕셔너리를 만들어서 반환
+def make_dict_for_isoform(list_RefSeq_validORF):# 다른 entry여도 Gene_Symbol이 여러 개인 경우를 추려내기 위한 딕션너리를 반환한다. 딕셔너리는 Gene_Symbol을 키로, 개수 상관없이 무조건 1로 저장된다.
     dict={}
     for refseq in list_RefSeq_validORF:
         dict[refseq.Gene_Symbol]=1
@@ -115,16 +113,15 @@ def delete_multientry(dict_check, list_RefSeq_NM): # entry가 여러 개인 경�
 def leave_representitive_isoform(dict_check, list_RefSeq_NM): # entry가 여러 개인 isoform 중 RefSeqID 숫자가 가장 작은 하나만 남겨서 리스트 반환
     templist=[]
     for refseq in list_RefSeq_NM:
-        if dict_check[refseq.Gene_Symbol]==1:
+        if dict_check[refseq.Gene_Symbol]==1: #만약 해당 Gene_Symbol에 해당하는 refseq class가 이미 리스트에 추가되어 있다면, 아래 코드에 의해 딕셔너리 값이 0이 되므로, 같은 Gene_Symbol을 가지는 refseq class는 2번 이상 리스트에 추가될 수 없다.
             templist.append(refseq)
             dict_check[refseq.Gene_Symbol]=0
     # End of for body for refseq
     return templist
 ######################################################################## End of leave_representitive_isoform
 
-def print_outfile(list_RefSeq, outfile):
+def print_outfile(list_RefSeq, outfile):#Excel에 적을 답을 txt 파일에 출력해주는 함수
     for refseq in list_RefSeq:
-        #mRNA_seq=return_seq(refseq, dict_file_chr)
         print(refseq.RefSeqID+'\t'+refseq.Gene_Symbol+'\t'+str(refseq.ORF_start)+'\t'+str(refseq.Length_ORF)+'\t'+str(refseq.Length_mRNA-refseq.ORF_end) ,file=outfile)
     #End for body for refseq
 ######################################################################## End of print_outfile
@@ -148,7 +145,7 @@ def check_valid_mRNA(refseq): # mRNA의 ORF 길이가 3의 배수인지, start c
 def make_list_valid(list_RefSeq_SingleEntry):
     global chr_list
     templist=[]
-    list_RefSeq_SingleEntry.sort(key=lambda x:x.ChrID)#ChrID 순서대로 먼저 정렬
+    list_RefSeq_SingleEntry.sort(key=lambda x:x.ChrID)#ChrID 순서대로 먼저 정렬. 이러지 않으면 for문을 5만번씩 24번 돌려야해서 비효율 적이다. 정렬하면 for문 5만번 1번만 돌리면 된다.
     length_list=len(list_RefSeq_SingleEntry)
     cnt=0
     for chr_num in chr_list: # 1번부터 Y까지의 크로모좀 전체 시퀀스를 해당 크로모좀 번호(string 형태)를 키로 하는 딕셔너리에 저장
@@ -157,25 +154,19 @@ def make_list_valid(list_RefSeq_SingleEntry):
         full_seq_chr=chr_file.read()
         full_seq_chr=file_processing(full_seq_chr)
         chr_file.close()
-        while cnt<length_list:
-            if(list_RefSeq_SingleEntry[cnt].ChrID!=chr_num):
+        while cnt<length_list: # RefSeq이 담긴 리스트의 길이보다 더 검사할 필요도 없고, 하면 오류가 나니까 끊어준다.
+            if(list_RefSeq_SingleEntry[cnt].ChrID!=chr_num):# ChrID가 현재 Chr과 다르면. 이미 ChrID 순서대로 sorting 했으므로, 다음 Chr을 검사해야할 시점이라는 뜻이다.
                 break
-            list_RefSeq_SingleEntry[cnt].Get_mRNASeq(full_seq_chr)
+            list_RefSeq_SingleEntry[cnt].Get_mRNASeq(full_seq_chr)#해당 RefSeq class에 mRNA 시퀀스를 넣어준다.
             if(check_valid_mRNA(list_RefSeq_SingleEntry[cnt])):
                 templist.append(list_RefSeq_SingleEntry[cnt])
             cnt+=1  
         #End of while body for cnt 
-        '''for refseq in list_RefSeq_SingleEntry:
-            if(refseq.ChrID==chr_num):
-                refseq.Get_mRNASeq(full_seq_chr)
-                if(check_valid_mRNA(refseq)):
-                    templist.append(refseq)'''
-        #End for body for refseq
     #End of for body for chr_num
     return templist
 ######################################################################## End of make_list_valid
 
-def make_list_raw_NM(file):
+def make_list_raw_NM(file):# 전체 RefSeq을 담는 리스트와 NM_만 골라낸 RefSeq을 담는 리스트를 반환하는 함수
     templist=[]
     templist_raw=[]
     for sLine in file.readlines():
@@ -214,9 +205,6 @@ def main():
     print_outfile(list_mRNA_final,outfile) # 엑셀에 쓸 결과물을 txt 파일로 출력한다.
     outfile.close()
     fancy_print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_mRNA_valid), len(list_mRNA_final))
-    '''outfile=open("../files_bioinfo2022/result_mRNAs_test.txt","w")
-    for refseq in list_mRNA_final:
-        print(refseq.RefSeqID+'\n'+refseq.mRNASeq+'\n',file=outfile)'''
     print("총 걸린 시간은 "+str(time.time()-start)+"초입니다.")
     outfile.close()
 ######################################################################## End of main
