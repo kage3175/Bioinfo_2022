@@ -1,5 +1,6 @@
 import time
 
+from itertools import product
 from scipy import stats
 
 
@@ -10,9 +11,12 @@ chr_list.sort()
 
 BASE_COMPLE={'A':'T','C':'G','G':'C','T':'A'} #상보적인 염기쌍을 전역변수로서 미리 잡아둔다. A -T, C- G 간 결합을 딕셔너리로 표현한 것
 STOP_CODON=['TAA','TGA', 'TAG']
+BASE=['A','C','G','T']
+CUTOFF=-0.5
 
 class RefSeq:
     global BASE_COMPLE
+    global CUTOFF
     def __init__(self):
         self.RefSeqID='NULL'
         self.Gene_Symbol='NULL'
@@ -35,6 +39,7 @@ class RefSeq:
         self.Length_mRNA=0
         self.Length_ORF=0
         self.dict_motif={}
+        self.status_down=0
     # End of __init__
     def exon_list_processing(self,list_exon):
         temp=list_exon.split(",")
@@ -83,8 +88,35 @@ class RefSeq:
         if(self.Length_3UTR>=7):
             for i in range(self.ORF_end, self.Length_mRNA-6):
                 self.dict_motif[self.mRNASeq[i:i+7]]=1
+    def is_down(self, fold_change):
+        if(fold_change<CUTOFF):
+            self.status_down=1
+        else:
+            self.status_down=-1
     #End of Get_mRNASeq
 ######################################################################## End of RefSeq
+
+class RefSeq_Fisher():
+    def __init__(self):
+        self.n1=0
+        self.n2=0
+        self.n3=0
+        self.n4=0
+        self.motif='AAAAAAA'
+        self.pvalue=0
+    def Setmotif(self, motif_):
+        self.motif=motif_
+    def n1_plus(self):
+        self.n1+=1
+    def n2_plus(self):
+        self.n2+=1
+    def Cal_n3_n4(self,total_motif):
+        self.n3=total_motif-self.n1
+        self.n4=total_motif-self.n2
+    def Getpvalue(self):
+        list_n=[[self.n1,self.n2], [self.n3,self.n4]]
+        temp, self.pvalue=stats.fisher_exact(list_n)
+######################################################################## End of RefSeq_Fisher
 
 def file_processing(sFile):#문자열 file을 건네받고 문자열 내부의 문자들은 전부 대문자로 바꾸고, 개행문자를 삭제함
     newsFile=sFile.replace('\n', '')
@@ -159,7 +191,7 @@ def make_list_valid(list_RefSeq_SingleEntry):
     length_list=len(list_RefSeq_SingleEntry)
     cnt=0
     for chr_num in chr_list: # 1번부터 Y까지의 크로모좀 전체 시퀀스를 해당 크로모좀 번호(string 형태)를 키로 하는 딕셔너리에 저장
-        chr_file=open("hg38ChrFiles/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
+        chr_file=open("../files_bioinfo2022/hg38ChrFiles/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
         trash=chr_file.readline()
         full_seq_chr=chr_file.read()
         full_seq_chr=file_processing(full_seq_chr)
@@ -168,6 +200,7 @@ def make_list_valid(list_RefSeq_SingleEntry):
             if(list_RefSeq_SingleEntry[cnt].ChrID!=chr_num):# ChrID가 현재 Chr과 다르면. 이미 ChrID 순서대로 sorting 했으므로, 다음 Chr을 검사해야할 시점이라는 뜻이다.
                 break
             list_RefSeq_SingleEntry[cnt].Get_mRNASeq(full_seq_chr)#해당 RefSeq class에 mRNA 시퀀스를 넣어준다.
+            list_RefSeq_SingleEntry[cnt].getMotif_3UTR()
             if(check_valid_mRNA(list_RefSeq_SingleEntry[cnt])):
                 templist.append(list_RefSeq_SingleEntry[cnt])
             cnt+=1  
@@ -189,6 +222,19 @@ def make_list_raw_NM(file):# 전체 RefSeq을 담는 리스트와 NM_만 골라�
     return templist_raw, templist
 ######################################################################## End of make_list_NM
 
+def make_product(base, num_product):
+    temparr=[]
+    production=product(base,repeat=num_product)
+    for tup in production:
+        temp_str=''
+        for i in range(num_product):
+            temp_str=temp_str + tup[i]
+        #End of for body for i
+        temparr.append(temp_str)
+    #End of for body for tup
+    return temparr
+######################################################################## End of make_product
+
 def fancy_print(*args):
     length=len(args)
     templist=[str(i+1)+"번 답:\t" for i in range(length)]
@@ -201,23 +247,111 @@ def fancy_print(*args):
 
 def main():
     global chr_list
+    global BASE
+    global CUTOFF
+    total_motif=0
     start=time.time()
-    file=open("refFlat.txt", 'r')
+    dict_RefSeq={}
+    combination_7mer = make_product(BASE,7)
+    dict_RefSeq_Fisher={}
+    list_RefSeq_Fisher=[]
+    file=open("../files_bioinfo2022/refFlat.txt", 'r')
     list_RefSeq_raw, list_RefSeq_NM=make_list_raw_NM(file)
     dict_ID_entry=make_dict_entry(list_RefSeq_NM)# entry가 1개 이상인지를 확인하기 위한 딕셔너리
     file.close()
-    outfile=open("result.txt", 'w')
+    
     list_RefSeq_SingleEntry=delete_multientry(dict_ID_entry, list_RefSeq_NM)
     list_mRNA_valid=make_list_valid(list_RefSeq_SingleEntry) # 4번 answer에 대한 list
     list_mRNA_valid.sort(key=lambda x:x.NUM_RefSeqID)#각 RefSeqID의 뒤에 숫자에 대해서 sorting
     dict_ID_isoform=make_dict_for_isoform(list_mRNA_valid)#isoform인 친구들은 하나만 나타나도록 딕셔너리 만든다
     list_mRNA_final=leave_representitive_isoform(dict_ID_isoform,list_mRNA_valid) # 5번 answer에 대한 list
-    print_outfile(list_mRNA_final,outfile) # 엑셀에 쓸 결과물을 txt 파일로 출력한다.
-    outfile.close()
     fancy_print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_mRNA_valid), len(list_mRNA_final))
-    print(list_mRNA_final[0].Length_3UTR,list_mRNA_final[0].dict_motif)
+    file=open("../files_bioinfo2022/Mission5_Dataset_2022.txt", "r")
+    temp=list(file.read().split("\n"))
+    for combination in combination_7mer:#각 모티프를 키로 하는 refseq_fisher 딕셔너리 초기화
+        refseq_F=RefSeq_Fisher()
+        refseq_F.Setmotif(combination)
+        dict_RefSeq_Fisher[combination]=refseq_F
+    for refseq in list_mRNA_final: #list_mRNA_final에 있는 refseq들을 다 Gene_Symbol을 키로 하는 딕셔너리로 옮겨줌
+        dict_RefSeq[refseq.Gene_Symbol]=refseq
+    for data in temp:
+        try:
+            templist=list(data.split("\t"))
+            templist[1]=float(templist[1])
+            #dict_RefSeq[templist[0]].is_down(templist[1])
+            if templist[1]<=CUTOFF: # -0.5보다 fold change 값이 낮을 때. 특정 모티프의 n1 값을 증가시켜야 한다.
+                try:
+                    sMotiflist=list(dict_RefSeq[templist[0]].dict_motif.keys())
+                    total_motif+=1
+                    for motif in sMotiflist:
+                        dict_RefSeq_Fisher[motif].n1_plus()
+                except KeyError:
+                    continue
+            else:
+                try:
+                    sMotiflist=list(dict_RefSeq[templist[0]].dict_motif.keys())
+                    total_motif+=1
+                    for motif in sMotiflist:
+                        dict_RefSeq_Fisher[motif].n2_plus()
+                except KeyError:
+                    continue
+        except IndexError:
+            break
+    sRefSeq_F_list=list(dict_RefSeq_Fisher.keys())
+    for motif in sRefSeq_F_list:
+        dict_RefSeq_Fisher[motif].Cal_n3_n4(total_motif)
+        dict_RefSeq_Fisher[motif].Getpvalue()
+        list_RefSeq_Fisher.append(dict_RefSeq_Fisher[motif])
+    print(dict_RefSeq_Fisher['AAAAAAA'].n1,dict_RefSeq_Fisher['AAAAAAA'].n2,dict_RefSeq_Fisher['AAAAAAA'].n3,dict_RefSeq_Fisher['AAAAAAA'].n4, dict_RefSeq_Fisher['AAAAAAA'].pvalue)
+    file.close()
+    '''for combination in combination_7mer:
+        n1,n2,n3,n4=0,0,0,0
+        refseq_F=RefSeq_Fisher()
+        refseq_F.Setmotif(combination)
+        for gene_symbol in sKeylist_down:
+            if(Downregulated_gene[gene_symbol]==1):
+                try:
+                    temp=dict_RefSeq[gene_symbol].dict_motif[combination]
+                    n1+=1
+                except KeyError:
+                    n3+=1
+            else:
+                try:
+                    temp=dict_RefSeq[gene_symbol].dict_motif[combination]
+                    n2+=1
+                except KeyError:
+                    n4+=1
+        for refseq in list_mRNA_final:
+            try:
+                if(Downregulated_gene[refseq.Gene_Symbol]==1):
+                    try:
+                        if(refseq.dict_motif[combination]==1):
+                            n1+=1
+                        else:
+                            print("Wrong")
+                    except KeyError:
+                        n3+=1
+                else:
+                    try:
+                        if(refseq.dict_motif[combination]==1):
+                            n2+=1
+                        else:
+                            print("Wrong")
+                    except KeyError:
+                        n4+=1
+            except KeyError:
+                continue
+        refseq_F.Setns(n1,n2,n3,n4)
+        refseq_F.Getpvalue()
+        dict_RefSeq_Fisher.append(refseq_F)'''
+
+    #dict_RefSeq_Fisher.sort(key= lambda x:x.pvalue)
+    print(str(time.time()-start)+"초")
+    list_RefSeq_Fisher.sort(key=lambda x:x.pvalue)
+    for i in range(10):
+        print(list_RefSeq_Fisher[i].pvalue, list_RefSeq_Fisher[i].motif)
+    
     print("총 걸린 시간은 "+str(time.time()-start)+"초입니다.")
-    outfile.close()
 ######################################################################## End of main
 
 main()
