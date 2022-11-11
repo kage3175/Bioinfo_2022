@@ -1,5 +1,8 @@
 import time
 
+from scipy import stats
+
+
 chr_list=[str(i) for i in range(1,23)]
 chr_list.append('X')
 chr_list.append('Y')#Chr list를 담기위한 것. 사람의 유전자 이름은 절대 바뀔 일이 없으므로 전역변수로 설정하였다.
@@ -27,9 +30,11 @@ class RefSeq:
         self.temp=[]
         self.mRNASeq='NULL'
         self.ORF_start=-1
-        self.ORF_end=-1
+        self.ORF_end=-1    #ORF_end는 3'UTR start와 일치한다. end 자체가 exclusive이기 때문
+        self.Length_3UTR=0
         self.Length_mRNA=0
         self.Length_ORF=0
+        self.dict_motif={}
     # End of __init__
     def exon_list_processing(self,list_exon):
         temp=list_exon.split(",")
@@ -73,6 +78,11 @@ class RefSeq:
         else:
             self.mRNASeq=mRNA_seq
         self.Length_ORF=self.ORF_end-self.ORF_start#ORF 길이 저장
+        self.Length_3UTR=self.Length_mRNA-self.ORF_end
+    def getMotif_3UTR(self):
+        if(self.Length_3UTR>=7):
+            for i in range(self.ORF_end, self.Length_mRNA-6):
+                self.dict_motif[self.mRNASeq[i:i+7]]=1
     #End of Get_mRNASeq
 ######################################################################## End of RefSeq
 
@@ -149,7 +159,7 @@ def make_list_valid(list_RefSeq_SingleEntry):
     length_list=len(list_RefSeq_SingleEntry)
     cnt=0
     for chr_num in chr_list: # 1번부터 Y까지의 크로모좀 전체 시퀀스를 해당 크로모좀 번호(string 형태)를 키로 하는 딕셔너리에 저장
-        chr_file=open("../files_bioinfo2022/hg38ChrFiles/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
+        chr_file=open("hg38ChrFiles/chr"+chr_num+".fa","r")############################## 제출할 때 바꿔야함
         trash=chr_file.readline()
         full_seq_chr=chr_file.read()
         full_seq_chr=file_processing(full_seq_chr)
@@ -192,11 +202,11 @@ def fancy_print(*args):
 def main():
     global chr_list
     start=time.time()
-    file=open("../files_bioinfo2022/refFlat.txt", 'r')
+    file=open("refFlat.txt", 'r')
     list_RefSeq_raw, list_RefSeq_NM=make_list_raw_NM(file)
     dict_ID_entry=make_dict_entry(list_RefSeq_NM)# entry가 1개 이상인지를 확인하기 위한 딕셔너리
     file.close()
-    outfile=open("../files_bioinfo2022/result_test.txt", 'w')
+    outfile=open("result.txt", 'w')
     list_RefSeq_SingleEntry=delete_multientry(dict_ID_entry, list_RefSeq_NM)
     list_mRNA_valid=make_list_valid(list_RefSeq_SingleEntry) # 4번 answer에 대한 list
     list_mRNA_valid.sort(key=lambda x:x.NUM_RefSeqID)#각 RefSeqID의 뒤에 숫자에 대해서 sorting
@@ -205,6 +215,7 @@ def main():
     print_outfile(list_mRNA_final,outfile) # 엑셀에 쓸 결과물을 txt 파일로 출력한다.
     outfile.close()
     fancy_print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_mRNA_valid), len(list_mRNA_final))
+    print(list_mRNA_final[0].Length_3UTR,list_mRNA_final[0].dict_motif)
     print("총 걸린 시간은 "+str(time.time()-start)+"초입니다.")
     outfile.close()
 ######################################################################## End of main
