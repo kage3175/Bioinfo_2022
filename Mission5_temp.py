@@ -13,6 +13,7 @@ BASE_COMPLE={'A':'T','C':'G','G':'C','T':'A'} #상보적인 염기쌍을 전역�
 STOP_CODON=['TAA','TGA', 'TAG']
 BASE=['A','C','G','T']
 CUTOFF=-0.5
+PSUEDO_COUNT=0.000000001
 
 class RefSeq:
     global BASE_COMPLE
@@ -97,6 +98,7 @@ class RefSeq:
 ######################################################################## End of RefSeq
 
 class RefSeq_Fisher():
+    global PSUEDO_COUNT
     def __init__(self):
         self.n1=0
         self.n2=0
@@ -104,15 +106,19 @@ class RefSeq_Fisher():
         self.n4=0
         self.motif='AAAAAAA'
         self.pvalue=0
+        self.A=0
+        self.B=0
     def Setmotif(self, motif_):
         self.motif=motif_
     def n1_plus(self):
         self.n1+=1
     def n2_plus(self):
         self.n2+=1
-    def Cal_n3_n4(self,total_motif):
-        self.n3=total_motif-self.n1
-        self.n4=total_motif-self.n2
+    def Cal_n3_n4(self,total_down, total_notdown):
+        self.n3=total_down-self.n1
+        self.n4=total_notdown-self.n2
+        self.A=(self.n1+PSUEDO_COUNT)/(self.n1+self.n2+PSUEDO_COUNT)
+        self.B=(self.n3+PSUEDO_COUNT)/(self.n3+self.n4+PSUEDO_COUNT)
     def Getpvalue(self):
         list_n=[[self.n1,self.n2], [self.n3,self.n4]]
         temp, self.pvalue=stats.fisher_exact(list_n)
@@ -249,7 +255,8 @@ def main():
     global chr_list
     global BASE
     global CUTOFF
-    total_motif=0
+    total_down=0
+    total_notdown=0
     start=time.time()
     dict_RefSeq={}
     combination_7mer = make_product(BASE,7)
@@ -282,7 +289,7 @@ def main():
             if templist[1]<=CUTOFF: # -0.5보다 fold change 값이 낮을 때. 특정 모티프의 n1 값을 증가시켜야 한다.
                 try:
                     sMotiflist=list(dict_RefSeq[templist[0]].dict_motif.keys())
-                    total_motif+=1
+                    total_down+=1
                     for motif in sMotiflist:
                         dict_RefSeq_Fisher[motif].n1_plus()
                 except KeyError:
@@ -290,7 +297,7 @@ def main():
             else:
                 try:
                     sMotiflist=list(dict_RefSeq[templist[0]].dict_motif.keys())
-                    total_motif+=1
+                    total_notdown+=1
                     for motif in sMotiflist:
                         dict_RefSeq_Fisher[motif].n2_plus()
                 except KeyError:
@@ -299,7 +306,7 @@ def main():
             break
     sRefSeq_F_list=list(dict_RefSeq_Fisher.keys())
     for motif in sRefSeq_F_list:
-        dict_RefSeq_Fisher[motif].Cal_n3_n4(total_motif)
+        dict_RefSeq_Fisher[motif].Cal_n3_n4(total_down, total_notdown)
         dict_RefSeq_Fisher[motif].Getpvalue()
         list_RefSeq_Fisher.append(dict_RefSeq_Fisher[motif])
     print(dict_RefSeq_Fisher['AAAAAAA'].n1,dict_RefSeq_Fisher['AAAAAAA'].n2,dict_RefSeq_Fisher['AAAAAAA'].n3,dict_RefSeq_Fisher['AAAAAAA'].n4, dict_RefSeq_Fisher['AAAAAAA'].pvalue)
@@ -348,8 +355,13 @@ def main():
     #dict_RefSeq_Fisher.sort(key= lambda x:x.pvalue)
     print(str(time.time()-start)+"초")
     list_RefSeq_Fisher.sort(key=lambda x:x.pvalue)
-    for i in range(10):
-        print(list_RefSeq_Fisher[i].pvalue, list_RefSeq_Fisher[i].motif)
+    cnt=0
+    i=0
+    while cnt<10:
+        if(list_RefSeq_Fisher[i].A/list_RefSeq_Fisher[i].B>1):
+            print(list_RefSeq_Fisher[i].pvalue, list_RefSeq_Fisher[i].motif)
+            cnt+=1
+        i+=1
     
     print("총 걸린 시간은 "+str(time.time()-start)+"초입니다.")
 ######################################################################## End of main
