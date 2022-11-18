@@ -1,5 +1,5 @@
 import time
-
+import datetime
 from itertools import product
 from scipy import stats
 
@@ -85,7 +85,7 @@ class RefSeq:
         if(self.Length_3UTR>=7):
             for i in range(self.ORF_end, self.Length_mRNA-6):
                 self.dict_motif[self.mRNASeq[i:i+7]]=1
-    def Get_Length_ORF(self):
+    def Get_Length_ORF(self): ### 이하 함수들은 ORF_start 등의 인스턴스 변수들을 반환해주는 함수들이다.
         return self.Length_ORF
     def Get_mRNASeq(self):
         return self.mRNASeq
@@ -101,14 +101,14 @@ class RefSeq:
         return self.NUM_RefSeqID
     def Get_Gene_Symbol(self):
         return self.Gene_Symbol
-    def  Get_ChrID(self):
+    def Get_ChrID(self):
         return self.ChrID
     def Get_Length_mRNA(self):
         return self.Length_mRNA
     #End of Get_mRNASeq
 ######################################################################## End of RefSeq
 
-class RefSeq_Fisher():
+class RefSeq_Fisher:
     global PSUEDO_COUNT
     def __init__(self):
         self.n1=0
@@ -134,7 +134,7 @@ class RefSeq_Fisher():
     def Cal_pvalue(self):
         list_n=[[self.n1,self.n2], [self.n3,self.n4]]
         temp, self.pvalue=stats.fisher_exact(list_n)
-    def Get_motif(self):
+    def Get_motif(self): #### 이하 함수들은 motif, pvalue 등을 반환해주는 함수. 클래스 내부 요소에 직접 접근하지 않도록 한다.
         return self.motif
     def Get_pvalue(self):
         return self.pvalue
@@ -199,6 +199,7 @@ def count_Fisher_variables(dataset, dict_RefSeq_Fisher, dict_RefSeq):
             except KeyError:
                 continue
     return total_down, total_notdown
+######################################################################## End of count_Fisher_variables
 
 def delete_multientry(list_RefSeq_NM): # entry가 여러 개인 경우를 제외하고 만든 (클래스)리스트를 반환
     dict_check=make_dict_entry(list_RefSeq_NM)# entry가 1개 이상인지를 확인하기 위한 딕셔너리
@@ -350,6 +351,7 @@ def main():
     global chr_list
     global BASE
     global CUTOFF
+    print(datetime.datetime.now())
     start=time.time()
     dict_RefSeq={}
     production_7mer = make_product(BASE,7)

@@ -10,3 +10,4 @@ def testing(x,class_):
 dict=testing(1,test)
 
 print(dict[1].n)
+
