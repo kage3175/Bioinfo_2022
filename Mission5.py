@@ -334,7 +334,7 @@ def print_result_Mission5(list_RefSeq_Fisher):
     while cnt<10: #상위 10개만 출력한다
         #list_RefSeq_Fisher[i].Cal_RelativeRisk() #A, B를 계산해주고
         Relative_Risk=list_RefSeq_Fisher[i].Get_Relative_Risk()
-        if(list_RefSeq_Fisher[i].Relative_Risk>1): #A, B가 
+        if(Relative_Risk>1): #A, B가 
             print(list_RefSeq_Fisher[i].Get_motif+'\t'+str(list_RefSeq_Fisher[i].Get_pvalue)+'\t'+str(list_RefSeq_Fisher[i].Get_n1)+'\t'+str(list_RefSeq_Fisher[i].Get_n2)+'\t'+str(list_RefSeq_Fisher[i].Get_n3)+'\t'+str(list_RefSeq_Fisher[i].Get_n4)+'\t'+str(list_RefSeq_Fisher[i].Get_Relative_Risk))
             cnt+=1
         i+=1
@@ -375,7 +375,8 @@ def main():
     for motif in production_7mer:
         dict_RefSeq_Fisher[motif].Cal_n3_n4(total_down, total_notdown)
         dict_RefSeq_Fisher[motif].Cal_RelativeRisk()
-        if(dict_RefSeq_Fisher[motif].Get_Relative_Risk>1): # Relative Risk가 1 초과인 경우만 검사
+        Relative_Risk=dict_RefSeq_Fisher[motif].Get_Relative_Risk
+        if(Relative_Risk>1): # Relative Risk가 1 초과인 경우만 검사
             dict_RefSeq_Fisher[motif].Cal_pvalue()
             list_RefSeq_Fisher.append(dict_RefSeq_Fisher[motif])
     # End of for body for motif
