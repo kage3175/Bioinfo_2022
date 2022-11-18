@@ -152,11 +152,11 @@ class RefSeq_Fisher():
 
 def check_valid_mRNA(refseq): # mRNA의 ORF 길이가 3의 배수인지, start codon이나 stop codon이 시작과 끝에 있는지, 중간에 멈춰버리지 않는 지 등을 검사
     global STOP_CODON
-    temp_mRNASeq=Get_mRNASeq()
-    ORF_start=refseq.Get_ORF_start()
+    temp_mRNASeq=refseq.Get_mRNASeq()
+    ORF_start=refseq.Get_ORF_start()                                                  
     ORF_end=refseq.Get_ORF_end()
     Length_ORF=refseq.Get_Length_ORF()
-    if(Length_ORF()%3!=0): # ORF의 길이가 3의 배수인지
+    if(Length_ORF%3!=0): # ORF의 길이가 3의 배수인지
         return False
     elif(temp_mRNASeq[ORF_start:ORF_start+3]!='ATG'): # ORF의 첫 3글자가 ATG인지
         return False
@@ -164,7 +164,7 @@ def check_valid_mRNA(refseq): # mRNA의 ORF 길이가 3의 배수인지, start c
         return False
     else:
         for i in range(Length_ORF//3 -1):#중간에 STOP CODON이 존재하는지 검사. 끝은 어차피 stop codon이어야 하므로 검사하지 않는다.
-            if(temp_mRNASeq[ORF_Start+i*3:ORF_start+i*3+3] in STOP_CODON):
+            if(temp_mRNASeq[ORF_start+i*3:ORF_start+i*3+3] in STOP_CODON):
                 return False
         #End of for body for i
         return True# 다 통과하면 True
@@ -277,7 +277,7 @@ def make_list_raw_NM(file):# 전체 RefSeq을 담는 리스트와 NM_만 골라�
         temp_RefSeq.parsing(sLine)
         templist_raw.append(temp_RefSeq)
         RefSeqID=temp_RefSeq.Get_RefSeqID()
-        ChrID=temp_RefSeq.Get_ChrID
+        ChrID=temp_RefSeq.Get_ChrID()
         if(RefSeqID[:3]=='NM_' and (ChrID in chr_list)):
             templist.append(temp_RefSeq)
     # End of for body for sLine
@@ -334,8 +334,8 @@ def print_result_Mission5(list_RefSeq_Fisher):
     while cnt<10: #상위 10개만 출력한다
         #list_RefSeq_Fisher[i].Cal_RelativeRisk() #A, B를 계산해주고
         Relative_Risk=list_RefSeq_Fisher[i].Get_Relative_Risk()
-        if(Relative_Risk>1): #A, B가 
-            print(list_RefSeq_Fisher[i].Get_motif+'\t'+str(list_RefSeq_Fisher[i].Get_pvalue)+'\t'+str(list_RefSeq_Fisher[i].Get_n1)+'\t'+str(list_RefSeq_Fisher[i].Get_n2)+'\t'+str(list_RefSeq_Fisher[i].Get_n3)+'\t'+str(list_RefSeq_Fisher[i].Get_n4)+'\t'+str(list_RefSeq_Fisher[i].Get_Relative_Risk))
+        if(Relative_Risk>1):
+            print(list_RefSeq_Fisher[i].Get_motif()+'\t'+str(list_RefSeq_Fisher[i].Get_pvalue())+'\t'+str(list_RefSeq_Fisher[i].Get_n1())+'\t'+str(list_RefSeq_Fisher[i].Get_n2())+'\t'+str(list_RefSeq_Fisher[i].Get_n3())+'\t'+str(list_RefSeq_Fisher[i].Get_n4())+'\t'+str(list_RefSeq_Fisher[i].Get_Relative_Risk()))
             cnt+=1
         i+=1
 ######################################################################## End of print_result_Mission5
@@ -368,14 +368,14 @@ def main():
     dataset=list(file.read().split("\n"))
     dict_RefSeq_Fisher=make_dict_Fisher(production_7mer, RefSeq_Fisher)
     for refseq in list_mRNA_final: #list_mRNA_final에 있는 refseq들을 다 Gene_Symbol을 키로 하는 딕셔너리로 옮겨줌
-        Gene_Symbol=refseq.Get_Gene_Symbol
+        Gene_Symbol=refseq.Get_Gene_Symbol()
         dict_RefSeq[Gene_Symbol]=refseq
     # End of for body for refseq
     total_down, total_notdown = count_Fisher_variables(dataset, dict_RefSeq_Fisher, dict_RefSeq)
     for motif in production_7mer:
         dict_RefSeq_Fisher[motif].Cal_n3_n4(total_down, total_notdown)
         dict_RefSeq_Fisher[motif].Cal_RelativeRisk()
-        Relative_Risk=dict_RefSeq_Fisher[motif].Get_Relative_Risk
+        Relative_Risk=dict_RefSeq_Fisher[motif].Get_Relative_Risk()
         if(Relative_Risk>1): # Relative Risk가 1 초과인 경우만 검사
             dict_RefSeq_Fisher[motif].Cal_pvalue()
             list_RefSeq_Fisher.append(dict_RefSeq_Fisher[motif])
