@@ -241,8 +241,8 @@ def leave_representitive_isoform(dict_check, list_RefSeq_NM): # entry가 여러 
 
 def make_dict_entry(list_RefSeq_NM):# 각 entry가 1개 이상인지를 확인하기 위한 딕셔너리를 만들어서 반환
     dict={}
-    RefSeqID=refseq.Get_RefSeqID()
     for refseq in list_RefSeq_NM:
+        RefSeqID=refseq.Get_RefSeqID()
         try:
             dict[RefSeqID]+=1
         except KeyError:
