@@ -291,7 +291,7 @@ def print_result_Mission5(list_RefSeq_Fisher):
     while cnt<10: #상위 10개만 출력한다
         #list_RefSeq_Fisher[i].Cal_A_B() #A, B를 계산해주고
         if(list_RefSeq_Fisher[i].A/list_RefSeq_Fisher[i].B>1): #A, B가 
-            print(list_RefSeq_Fisher[i].motif+'\t'+str(list_RefSeq_Fisher[i].pvalue)+'\t'+str(list_RefSeq_Fisher[i].n1)+'\t'+str(list_RefSeq_Fisher[i].n2)+'\t'+str(list_RefSeq_Fisher[i].n3)+'\t'+str(list_RefSeq_Fisher[i].n4)+'\t'+str(list_RefSeq_Fisher[i].Relative_risk))
+            print(list_RefSeq_Fisher[i].motif+'\t'+str(list_RefSeq_Fisher[i].pvalue)+'\t'+str(list_RefSeq_Fisher[i].n1)+'\t'+str(list_RefSeq_Fisher[i].n2)+'\t'+str(list_RefSeq_Fisher[i].n3)+'\t'+str(list_RefSeq_Fisher[i].n4)+'\t'+str(list_RefSeq_Fisher[i].Relative_Risk))
             cnt+=1
         i+=1
 ######################################################################## End of print_result_Mission5
