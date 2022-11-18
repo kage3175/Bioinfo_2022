@@ -101,6 +101,7 @@ class RefSeq_Fisher():
         self.pvalue=0
         self.A=0
         self.B=0
+        self.Relative_Risk=0
     def Setmotif(self, motif_):
         self.motif=motif_
     def n1_plus(self):
@@ -113,6 +114,7 @@ class RefSeq_Fisher():
     def Cal_A_B(self):
         self.A=(self.n1+PSUEDO_COUNT)/(self.n1+self.n2+PSUEDO_COUNT)
         self.B=(self.n3+PSUEDO_COUNT)/(self.n3+self.n4+PSUEDO_COUNT)
+        self.Relative_Risk=self.A/self.B
     def Getpvalue(self):
         list_n=[[self.n1,self.n2], [self.n3,self.n4]]
         temp, self.pvalue=stats.fisher_exact(list_n)
@@ -144,7 +146,7 @@ def count_Fisher_variables(dataset, dict_RefSeq_Fisher, dict_RefSeq):
         templist[1]=float(templist[1])
         if templist[1]<=CUTOFF: # -0.5보다 fold change 값이 낮을 때. 그 gene의 3'UTR에 있는 모티프에 해당하는 n1 값을 증가시켜야 한다.
             try:
-                sMotiflist=list(dict_RefSeq[templist[0]].dict_motif.keys())
+                sMotiflist=list(dict_RefSeq[templist[0].upper()].dict_motif.keys())
                 total_down+=1
                 for motif in sMotiflist:
                     dict_RefSeq_Fisher[motif].n1_plus() #해당 모티프를 키로 하는 클래스의 n1 값을 1 증가시킨다. n3, n4는 계산된 n1, n2 값을 기반으로 down, notdown gene의 수에서 n1, n2를 빼서 얻을 수 있다.
@@ -287,9 +289,9 @@ def print_result_Mission5(list_RefSeq_Fisher):
     cnt=0
     i=0
     while cnt<10: #상위 10개만 출력한다
-        list_RefSeq_Fisher[i].Cal_A_B() #A, B를 계산해주고
+        #list_RefSeq_Fisher[i].Cal_A_B() #A, B를 계산해주고
         if(list_RefSeq_Fisher[i].A/list_RefSeq_Fisher[i].B>1): #A, B가 
-            print(str(list_RefSeq_Fisher[i].pvalue)+'\t'+list_RefSeq_Fisher[i].motif)
+            print(list_RefSeq_Fisher[i].motif+'\t'+str(list_RefSeq_Fisher[i].pvalue)+'\t'+str(list_RefSeq_Fisher[i].n1)+'\t'+str(list_RefSeq_Fisher[i].n2)+'\t'+str(list_RefSeq_Fisher[i].n3)+'\t'+str(list_RefSeq_Fisher[i].n4)+'\t'+str(list_RefSeq_Fisher[i].Relative_risk))
             cnt+=1
         i+=1
 ######################################################################## End of print_result_Mission5
@@ -327,8 +329,10 @@ def main():
     total_down, total_notdown = count_Fisher_variables(dataset, dict_RefSeq_Fisher, dict_RefSeq)
     for motif in production_7mer:
         dict_RefSeq_Fisher[motif].Cal_n3_n4(total_down, total_notdown)
-        dict_RefSeq_Fisher[motif].Getpvalue()
-        list_RefSeq_Fisher.append(dict_RefSeq_Fisher[motif])
+        dict_RefSeq_Fisher[motif].Cal_A_B()
+        if(dict_RefSeq_Fisher[motif].Relative_Risk>1): # Relative Risk가 1 초과인 경우만 검사
+            dict_RefSeq_Fisher[motif].Getpvalue()
+            list_RefSeq_Fisher.append(dict_RefSeq_Fisher[motif])
     # End of for body for motif
     file.close()
     list_RefSeq_Fisher.sort(key=lambda x:x.pvalue) #pvalue 값을 기준으로 리스트를 정렬한다.
