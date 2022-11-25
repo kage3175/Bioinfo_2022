@@ -357,28 +357,49 @@ def print_outfile(list_RefSeq, outfile):#Excel에 적을 답을 txt 파일에 �
     #End for body for refseq
 ######################################################################## End of print_outfile
 
-def print_result_Mission5(list_RefSeq_Fisher):
+def print_result_Mission6(list_RefSeq_Fisher, bonferroni):
     cnt=0
     i=0
     while cnt<5: #상위 5개만 출력한다
         Relative_Risk=list_RefSeq_Fisher[i].Get_Relative_Risk()
         if(Relative_Risk>1):
-            print(list_RefSeq_Fisher[i].Get_motif()+'\t'+str(list_RefSeq_Fisher[i].Get_pvalue())+'\t'+str(list_RefSeq_Fisher[i].Get_n1())+'\t'+str(list_RefSeq_Fisher[i].Get_n2())+'\t'+str(list_RefSeq_Fisher[i].Get_n3())+'\t'+str(list_RefSeq_Fisher[i].Get_n4())+'\t'+str(list_RefSeq_Fisher[i].Get_Relative_Risk()))
+            print(list_RefSeq_Fisher[i].Get_motif()+'\t'+str(list_RefSeq_Fisher[i].Get_pvalue()*bonferroni)+'\t'+str(list_RefSeq_Fisher[i].Get_n1())+'\t'+str(list_RefSeq_Fisher[i].Get_n2())+'\t'+str(list_RefSeq_Fisher[i].Get_n3())+'\t'+str(list_RefSeq_Fisher[i].Get_n4())+'\t'+str(list_RefSeq_Fisher[i].Get_Relative_Risk()))
             cnt+=1
         i+=1
-######################################################################## End of print_result_Mission5
+######################################################################## End of print_result_Mission6
 
 def print_time(str_print,start, end):
     print(str_print+str(end-start)+"초 입니다.")
 ######################################################################## End of fancy_print
 
 
+def read_mi_Seqs(file):
+    flag=0
+    list_return=[]
+    templist=[1,1]
+    tempstr='a'
+    for sLine in file.readlines():
+        if flag==1:
+            flag=0
+            list_return.append([tempstr, sLine.replace('\n', '')])
+        elif(sLine[:4]=='>hsa'):
+            tempstr=sLine.replace('\n', '')
+            flag=1
+        else :
+            flag=0
+    return list_return
+            
+            
+            
+
+
 
 def main():
-    global chr_list
+    '''global chr_list
     global BASE
     global CUTOFF
     print(datetime.datetime.now())
+    count_test_case_3UTR=count_test_case_ORF=0
     start=time.time()
     dict_RefSeq={}
     production_7mer = make_product(BASE,7)
@@ -391,14 +412,19 @@ def main():
     dict_ID_isoform=make_dict_isoform(list_mRNA_valid)#isoform인 친구들은 하나만 나타나도록 딕셔너리 만든다
     list_mRNA_final=leave_representitive_isoform(dict_ID_isoform,list_mRNA_valid) # 5번 answer에 대한 list
     #fancy_print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_mRNA_valid), len(list_mRNA_final))
-    print_time("Mission4(출력 생략)까지 걸린 시간은 ",start, time.time())
+    print_time("Mission4(출력 생략)까지 걸린 시간은 ",start, time.time())'''
+    file=open("../files_bioinfo2022/mature.fa",'r')
+    list_miSeqs=read_mi_Seqs(file)
+    file.close()
+    print(list_miSeqs[0], list_miSeqs[1])
     
-    for refseq in list_mRNA_final: #list_mRNA_final에 있는 refseq들을 다 Gene_Symbol을 키로 하는 딕셔너리로 옮겨줌
+    '''for refseq in list_mRNA_final: #list_mRNA_final에 있는 refseq들을 다 Gene_Symbol을 키로 하는 딕셔너리로 옮겨줌
         Gene_Symbol=refseq.Get_Gene_Symbol()
         dict_RefSeq[Gene_Symbol]=refseq
     dict_RefSeq_Fisher, dict_RefSeq_Fisher_ORF=make_dict_Fisher(production_7mer, RefSeq_Fisher)
     for i in range(3):
-        list_RefSeq_Fisher=[]
+        count_test_case_ORF=count_test_case_3UTR=0
+        ist_RefSeq_Fisher_3UTR=[]
         list_RefSeq_Fisher_ORF=[]
         for motif in production_7mer:
             dict_RefSeq_Fisher[motif].Init_ns()
@@ -415,21 +441,23 @@ def main():
             dict_RefSeq_Fisher[motif].Cal_RelativeRisk()
             dict_RefSeq_Fisher_ORF[motif].Cal_RelativeRisk()
             if(dict_RefSeq_Fisher[motif].Get_Relative_Risk()>1): # Relative Risk가 1 초과인 경우만 검사
+                count_test_case_3UTR+=1
                 dict_RefSeq_Fisher[motif].Cal_pvalue()
-                list_RefSeq_Fisher.append(dict_RefSeq_Fisher[motif])
+                ist_RefSeq_Fisher_3UTR.append(dict_RefSeq_Fisher[motif])
             if(dict_RefSeq_Fisher_ORF[motif].Get_Relative_Risk()>1): # Relative Risk가 1 초과인 경우만 검사
+                count_test_case_ORF+=1
                 dict_RefSeq_Fisher_ORF[motif].Cal_pvalue()
                 list_RefSeq_Fisher_ORF.append(dict_RefSeq_Fisher_ORF[motif])
         # End of for body for motif
-        list_RefSeq_Fisher.sort(key=lambda x:x.Get_pvalue()) #pvalue 값을 기준으로 리스트를 정렬한다.
+        ist_RefSeq_Fisher_3UTR.sort(key=lambda x:x.Get_pvalue()) #pvalue 값을 기준으로 리스트를 정렬한다.
         list_RefSeq_Fisher_ORF.sort(key=lambda x:x.Get_pvalue())
         print("Mission6_dataset"+str(i+1)+" 3UTR 결과")
-        print_result_Mission5(list_RefSeq_Fisher)
+        print_result_Mission6(ist_RefSeq_Fisher_3UTR, count_test_case_3UTR)
         print("Mission6_dataset"+str(i+1)+" ORF 결과")
-        print_result_Mission5(list_RefSeq_Fisher_ORF)
+        print_result_Mission6(list_RefSeq_Fisher_ORF, count_test_case_ORF)
     
     
-    print_time("총 걸린 시간은 ",start, time.time())
+    print_time("총 걸린 시간은 ",start, time.time())'''
 ######################################################################## End of main
 
 main()
