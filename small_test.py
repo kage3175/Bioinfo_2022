@@ -1,13 +1,10 @@
-class test:
-    def __init__(self):
-        self.n=0
+file=open("../files_bioinfo2022/mature.fa", "r")
+count=0
+for sLine in file.readlines():
+    if(sLine[:4]==">hsa"):
+        count+=1
         
-def testing(x,class_):
-    dict={}
-    dict[x]= class_()
-    return dict
+print(count)
 
-dict=testing(1,test)
 
-print(dict[1].n)
-
+file.close()
