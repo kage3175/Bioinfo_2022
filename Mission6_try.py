@@ -168,6 +168,19 @@ class RefSeq_Fisher:
         return self.Relative_Risk
 ######################################################################## End of RefSeq_Fisher
 
+class miRNA:
+    def __init__(self):
+        self.name=''
+        self.seq=''
+    def Input_miRNA(self, name, seq):
+        self.name=name
+        self.seq=seq
+    def Get_seq(self):
+        return self.seq
+    def Get_name(self):
+        return self.name
+######################################################################## End of miRNA
+
 def check_valid_mRNA(refseq): # mRNA의 ORF 길이가 3의 배수인지, start codon이나 stop codon이 시작과 끝에 있는지, 중간에 멈춰버리지 않는 지 등을 검사
     global STOP_CODON
     temp_mRNASeq=refseq.Get_mRNASeq()
@@ -367,7 +380,10 @@ def print_result_Mission6(list_RefSeq_Fisher, bonferroni, list_miSeqs, outfile):
         Relative_Risk=list_RefSeq_Fisher[i].Get_Relative_Risk()
         motif=list_RefSeq_Fisher[i].Get_motif()
         if(Relative_Risk>1):
-            print(motif+'\t'+str(list_RefSeq_Fisher[i].Get_pvalue()*bonferroni)+'\t'+str(list_RefSeq_Fisher[i].Get_n1())+'\t'+str(list_RefSeq_Fisher[i].Get_n2())+'\t'+str(list_RefSeq_Fisher[i].Get_n3())+'\t'+str(list_RefSeq_Fisher[i].Get_n4())+'\t'+str(list_RefSeq_Fisher[i].Get_Relative_Risk()), file=outfile)
+            pvalue=list_RefSeq_Fisher[i].Get_pvalue()*bonferroni
+            if(pvalue>1):
+                pvalue=1.0
+            print(motif+'\t'+str(pvalue)+'\t'+str(list_RefSeq_Fisher[i].Get_n1())+'\t'+str(list_RefSeq_Fisher[i].Get_n2())+'\t'+str(list_RefSeq_Fisher[i].Get_n3())+'\t'+str(list_RefSeq_Fisher[i].Get_n4())+'\t'+str(list_RefSeq_Fisher[i].Get_Relative_Risk()), file=outfile)
             finding=''
             if motif[6]=='A':#A1인 경우 
                 num_finding=6
@@ -378,8 +394,9 @@ def print_result_Mission6(list_RefSeq_Fisher, bonferroni, list_miSeqs, outfile):
                 for j in range(6,-1,-1):
                     finding=finding+BASE_COMPLE_RNA[motif[j]]
             for miRNA in list_miSeqs:
-                if finding==miRNA[1][:num_finding]:
-                    print(miRNA[0], file=outfile)
+                miSeq=miRNA.Get_seq()
+                if finding==miSeq[:num_finding]:
+                    print(miRNA.Get_name(), file=outfile)
             cnt+=1
         i+=1
 ######################################################################## End of print_result_Mission6
@@ -388,23 +405,25 @@ def print_time(str_print,start, end):
     print(str_print+str(end-start)+"초 입니다.")
 ######################################################################## End of fancy_print
 
-def read_mi_Seqs(file):
+def read_miSeqs(file, class_miRNA):
     flag=0
     list_return=[]
     templist=[1,1]
     tempstr='a'
     for sLine in file.readlines():
         if flag==1:
+            miRNA=class_miRNA()
             flag=0
             sLine=sLine.replace('\n', '')
-            list_return.append([tempstr, sLine[1:8]])
+            miRNA.Input_miRNA(tempstr,sLine[1:8])
+            list_return.append(miRNA)
         elif(sLine[:4]=='>hsa'):
             tempstr=sLine.replace('\n', '')
             flag=1
         else :
             flag=0
     return list_return
-######################################################################## End of Read_mi_Seqs
+######################################################################## End of Read_miSeqs
 
 
 def main():
@@ -427,7 +446,7 @@ def main():
     #fancy_print(len(list_RefSeq_raw), len(list_RefSeq_NM), len(list_RefSeq_SingleEntry), len(list_mRNA_valid), len(list_mRNA_final))
     print_time("Mission4(출력 생략)까지 걸린 시간은 ",start, time.time())
     file=open("../files_bioinfo2022/mature.fa",'r')
-    list_miSeqs=read_mi_Seqs(file)
+    list_miSeqs=read_miSeqs(file, miRNA)
     file.close()
     
     for refseq in list_mRNA_final: #list_mRNA_final에 있는 refseq들을 다 Gene_Symbol을 키로 하는 딕셔너리로 옮겨줌
